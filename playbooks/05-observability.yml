@@ -1,0 +1,9 @@
+---
+# Prometheus + Grafana + Loki + Promtail
+- name: "Observability | Prometheus + Grafana + Loki"
+  hosts: observability
+  gather_facts: true
+  become: true
+  roles:
+    - role: docker
+    - role: observability_stack

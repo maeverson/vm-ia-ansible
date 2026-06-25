@@ -1,0 +1,23 @@
+---
+ollama_models:
+  - qwen3-coder:14b
+  - qwen2.5-coder:7b-base
+  - qwen3:8b
+  - bge-m3
+
+ollama_custom_models:
+  - name: qwen3-coder-rag
+    base: "qwen3-coder:14b"
+    template: Modelfile.qwen3-coder-rag.j2
+  - name: qwen3-chat-ptbr
+    base: "qwen3:8b"
+    template: Modelfile.qwen3-chat-ptbr.j2
+
+ollama_env:
+  OLLAMA_HOST: "0.0.0.0:11434"
+  OLLAMA_KEEP_ALIVE: "30m"
+  OLLAMA_MAX_LOADED_MODELS: "2"
+  OLLAMA_NUM_PARALLEL: "2"
+  OLLAMA_FLASH_ATTENTION: "1"
+  OLLAMA_KV_CACHE_TYPE: "q8_0"
+  OLLAMA_MODELS: "/var/lib/ollama/models"

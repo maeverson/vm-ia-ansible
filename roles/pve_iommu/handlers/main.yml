@@ -1,0 +1,15 @@
+---
+- name: update grub
+  ansible.builtin.shell: update-grub
+  listen: update grub
+
+- name: update initramfs
+  ansible.builtin.shell: update-initramfs -u -k all
+  listen: update initramfs
+
+- name: reboot host
+  ansible.builtin.reboot:
+    msg: "Reboot para aplicar IOMMU/VFIO"
+    reboot_timeout: 600
+    pre_reboot_delay: 5
+  listen: reboot host

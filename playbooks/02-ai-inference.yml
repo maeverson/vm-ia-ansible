@@ -1,0 +1,9 @@
+---
+# Driver NVIDIA + Ollama + modelos na vm-ai-inference
+- name: "AI Inference | NVIDIA Driver + Ollama"
+  hosts: ai_inference
+  gather_facts: true
+  become: true
+  roles:
+    - role: nvidia_driver
+    - role: ollama

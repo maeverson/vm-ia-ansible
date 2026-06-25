@@ -1,0 +1,100 @@
+---
+- name: "PVE | Baixar cloud image Ubuntu 24.04"
+  ansible.builtin.get_url:
+    url: "{{ ubuntu_image_url }}"
+    dest: "{{ ubuntu_image_path }}"
+    mode: '0644'
+
+- name: "PVE | Ler SSH public key"
+  ansible.builtin.slurp:
+    src: "{{ ssh_public_key_file }}"
+  register: ssh_pubkey_b64
+  delegate_to: localhost
+  become: false
+
+- name: "PVE | Criar VMs via Proxmox API (idempotente)"
+  community.general.proxmox_kvm:
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    api_host: "{{ proxmox_api_host }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ item.vmid }}"
+    name: "{{ item.name }}"
+    machine: q35
+    bios: ovmf
+    cpu: host
+    cores: "{{ item.cores }}"
+    sockets: 1
+    memory: "{{ item.memory }}"
+    balloon: 0
+    scsihw: virtio-scsi-single
+    agent: enabled=1
+    ostype: l26
+    net:
+      net0: "virtio,bridge={{ pve_bridge }},firewall=1"
+    ide:
+      ide2: "{{ proxmox_storage }}:cloudinit"
+    ipconfig:
+      ipconfig0: "ip={{ item.ip }}/24,gw={{ gateway }}"
+    nameservers: "{{ dns_servers | join(' ') }}"
+    ciuser: ubuntu
+    cipassword: "{{ default_cloud_user_password }}"
+    sshkeys: "{{ ssh_pubkey_b64.content | b64decode }}"
+    state: present
+  loop: "{{ vm_list }}"
+  loop_control:
+    label: "{{ item.name }} (VMID {{ item.vmid }})"
+  register: vm_create
+
+- name: "PVE | Importar disco cloud-init nas VMs novas"
+  ansible.builtin.shell: |
+    qm importdisk {{ item.vmid }} {{ ubuntu_image_path }} {{ proxmox_storage }}
+    qm set {{ item.vmid }} --scsi0 {{ proxmox_storage }}:vm-{{ item.vmid }}-disk-1,discard=on,iothread=1,ssd=1
+    qm resize {{ item.vmid }} scsi0 {{ item.disk_size }}G
+    qm set {{ item.vmid }} --boot order=scsi0
+    qm set {{ item.vmid }} --efidisk0 {{ proxmox_storage }}:0,efitype=4m,pre-enrolled-keys=0
+    qm set {{ item.vmid }} --serial0 socket --vga serial0
+  args:
+    creates: "/etc/pve/qemu-server/{{ item.vmid }}.conf.imported"
+  loop: "{{ vm_list }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: disk_import
+  changed_when: disk_import.rc == 0
+
+- name: "PVE | Marcar disco como importado"
+  ansible.builtin.file:
+    path: "/etc/pve/qemu-server/{{ item.vmid }}.conf.imported"
+    state: touch
+  loop: "{{ vm_list }}"
+  when: disk_import is changed
+
+- name: "PVE | Configurar GPU passthrough"
+  ansible.builtin.shell: |
+    qm set {{ item.vmid }} --hostpci0 {{ item.pci_id }},pcie=1,x-vga=1,rombar=1
+  args:
+    creates: "/etc/pve/qemu-server/{{ item.vmid }}.conf.gpu"
+  loop: "{{ vm_list }}"
+  when: item.gpu_passthrough | bool
+  loop_control:
+    label: "{{ item.name }} <- {{ item.pci_id }}"
+
+- name: "PVE | Marcar GPU como atribuida"
+  ansible.builtin.file:
+    path: "/etc/pve/qemu-server/{{ item.vmid }}.conf.gpu"
+    state: touch
+  loop: "{{ vm_list }}"
+  when: item.gpu_passthrough | bool
+
+- name: "PVE | Iniciar VMs"
+  community.general.proxmox_kvm:
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    api_host: "{{ proxmox_api_host }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ item.vmid }}"
+    name: "{{ item.name }}"
+    state: started
+  loop: "{{ vm_list }}"
+  loop_control:
+    label: "{{ item.name }}"

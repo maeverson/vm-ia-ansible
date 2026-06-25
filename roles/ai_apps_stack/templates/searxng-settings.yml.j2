@@ -1,0 +1,19 @@
+# Gerenciado pelo Ansible
+use_default_settings: true
+server:
+  secret_key: "{{ webui_secret }}"
+  limiter: false
+  image_proxy: true
+  port: 8080
+  bind_address: "0.0.0.0"
+general:
+  instance_name: "ai-search-corp"
+search:
+  safe_search: 1
+  autocomplete: "duckduckgo"
+  default_lang: "pt-BR"
+  formats:
+    - html
+    - json
+ui:
+  static_use_hash: true

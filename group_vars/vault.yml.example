@@ -1,0 +1,25 @@
+---
+# =============================================================
+# Template de secrets — COPIE PARA vault.yml E CRIPTOGRAFE:
+#   cp vault.yml.example vault.yml
+#   $EDITOR vault.yml          # preencha
+#   ansible-vault encrypt vault.yml
+# =============================================================
+
+# Proxmox API (criar usuário API: pveum)
+vault_proxmox_api_user: "root@pam"
+vault_proxmox_api_password: "TROCAR_SENHA_FORTE"
+
+# Senha inicial dos usuarios cloud-init nas VMs (hash bcrypt opcional)
+vault_default_cloud_user_password: "TROCAR_SENHA_VM"
+
+# Open WebUI / Postgres
+vault_postgres_password: "TROCAR_GERAR_OPENSSL_RAND_BASE64_24"
+vault_webui_secret: "TROCAR_GERAR_OPENSSL_RAND_HEX_32"
+
+# Authentik
+vault_authentik_secret: "TROCAR_GERAR_OPENSSL_RAND_BASE64_60"
+vault_authentik_pg_pass: "TROCAR_GERAR_OPENSSL_RAND_BASE64_32"
+
+# Grafana
+vault_grafana_admin_pass: "TROCAR_SENHA_FORTE"

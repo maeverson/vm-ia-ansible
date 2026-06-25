@@ -1,0 +1,8 @@
+---
+# Configura IOMMU / VFIO no host Proxmox para GPU passthrough
+- name: "PVE Host | IOMMU + VFIO setup"
+  hosts: pve
+  gather_facts: true
+  become: false
+  roles:
+    - role: pve_iommu

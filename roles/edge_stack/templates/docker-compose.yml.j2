@@ -1,0 +1,91 @@
+# Gerenciado pelo Ansible - role edge_stack
+version: "3.9"
+
+networks:
+  edge: {}
+
+volumes:
+  authentik-database:
+  authentik-redis:
+  authentik-media:
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: traefik
+    restart: unless-stopped
+    networks: [edge]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8080"
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --log.level=INFO
+      - --accesslog=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/dynamic:/etc/traefik/dynamic:ro
+      - ./traefik/acme:/etc/traefik/acme
+
+  authentik-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks: [edge]
+    environment:
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${PG_PASS}
+      POSTGRES_DB: authentik
+    volumes: [authentik-database:/var/lib/postgresql/data]
+
+  authentik-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [edge]
+    volumes: [authentik-redis:/data]
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:latest
+    restart: unless-stopped
+    command: server
+    networks: [edge]
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+    volumes:
+      - authentik-media:/media
+    depends_on: [authentik-postgres, authentik-redis]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.authentik.rule=Host(`auth.${DOMAIN}`)
+      - traefik.http.routers.authentik.entrypoints=websecure
+      - traefik.http.routers.authentik.tls=true
+      - traefik.http.services.authentik.loadbalancer.server.port=9000
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:latest
+    restart: unless-stopped
+    command: worker
+    networks: [edge]
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_REDIS__HOST: authentik-redis
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgres
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
+    volumes:
+      - authentik-media:/media
+    depends_on: [authentik-postgres, authentik-redis]

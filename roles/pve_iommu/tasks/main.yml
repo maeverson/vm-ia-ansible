@@ -1,0 +1,50 @@
+---
+- name: "PVE | Configurar GRUB cmdline para IOMMU"
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt pcie_acs_override=downstream,multifunction video=vesafb:off video=efifb:off"'
+  notify: update grub
+
+- name: "PVE | Garantir modulos VFIO em /etc/modules"
+  ansible.builtin.blockinfile:
+    path: /etc/modules
+    marker: "# {mark} ANSIBLE VFIO MODULES"
+    block: |
+      vfio
+      vfio_iommu_type1
+      vfio_pci
+      vfio_virqfd
+  notify: update initramfs
+
+- name: "PVE | Blacklist NVIDIA no host"
+  ansible.builtin.copy:
+    src: blacklist-nvidia.conf
+    dest: /etc/modprobe.d/blacklist-nvidia.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - update initramfs
+    - reboot host
+
+- name: "PVE | Vincular GPU ao vfio-pci"
+  ansible.builtin.template:
+    src: vfio.conf.j2
+    dest: /etc/modprobe.d/vfio.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - update initramfs
+    - reboot host
+
+- name: "PVE | Validar IOMMU ativo"
+  ansible.builtin.shell: "dmesg | grep -E 'DMAR|IOMMU' | head -5"
+  register: iommu_check
+  changed_when: false
+  failed_when: false
+
+- name: "PVE | Status IOMMU"
+  ansible.builtin.debug:
+    var: iommu_check.stdout_lines

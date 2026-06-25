@@ -1,0 +1,9 @@
+---
+# Open WebUI + RAG + SearXNG + Qdrant + Postgres + Tika + Redis
+- name: "AI Apps | Open WebUI + RAG Stack"
+  hosts: ai_apps
+  gather_facts: true
+  become: true
+  roles:
+    - role: docker
+    - role: ai_apps_stack

@@ -1,0 +1,39 @@
+---
+- name: "Edge | Criar diretorios"
+  ansible.builtin.file:
+    path: "/opt/edge/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - ""
+    - traefik
+    - traefik/dynamic
+    - traefik/acme
+
+- name: "Edge | .env (vault)"
+  ansible.builtin.template:
+    src: env.j2
+    dest: /opt/edge/.env
+    mode: '0600'
+  notify: restart edge
+
+- name: "Edge | docker-compose.yml"
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/edge/docker-compose.yml
+    mode: '0644'
+  notify: restart edge
+
+- name: "Edge | Rotas dinamicas Traefik"
+  ansible.builtin.template:
+    src: openwebui-routes.yml.j2
+    dest: /opt/edge/traefik/dynamic/openwebui.yml
+    mode: '0644'
+  notify: restart edge
+
+- name: "Edge | Subir stack"
+  community.docker.docker_compose_v2:
+    project_src: /opt/edge
+    state: present
+    pull: missing
+    remove_orphans: true

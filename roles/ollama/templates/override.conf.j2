@@ -1,0 +1,5 @@
+# Gerenciado pelo Ansible - role ollama
+[Service]
+{% for k, v in ollama_env.items() %}
+Environment="{{ k }}={{ v }}"
+{% endfor %}

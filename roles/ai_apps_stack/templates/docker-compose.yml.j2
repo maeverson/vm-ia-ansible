@@ -1,0 +1,106 @@
+# Gerenciado pelo Ansible - role ai_apps_stack
+version: "3.9"
+
+x-restart: &restart
+  restart: unless-stopped
+
+networks:
+  ai-net:
+    driver: bridge
+
+volumes:
+  open-webui-data:
+  qdrant-data:
+  postgres-data:
+  redis-data:
+  tika-data:
+
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    <<: *restart
+    networks: [ai-net]
+    ports:
+      - "3000:8080"
+    environment:
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - WEBUI_AUTH=true
+      - WEBUI_NAME=Assistente IA Corporativo
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - DEFAULT_LOCALE=pt-BR
+      - DEFAULT_USER_ROLE=pending
+      - VECTOR_DB=qdrant
+      - QDRANT_URI=http://qdrant:6333
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=bge-m3:latest
+      - RAG_OLLAMA_BASE_URL=${OLLAMA_BASE_URL}
+      - CONTENT_EXTRACTION_ENGINE=tika
+      - TIKA_SERVER_URL=http://tika:9998
+      - CHUNK_SIZE=1200
+      - CHUNK_OVERLAP=150
+      - ENABLE_RAG_WEB_SEARCH=true
+      - RAG_WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://searxng:8080/search?q=<query>&format=json
+      - RAG_WEB_SEARCH_RESULT_COUNT=5
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - open-webui-data:/app/backend/data
+      - ./functions:/app/backend/data/functions:ro
+    depends_on: [qdrant, postgres, searxng, tika, redis]
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    <<: *restart
+    networks: [ai-net]
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://searxng:8080/
+      - INSTANCE_NAME=ai-search-corp
+    cap_drop: [ALL]
+    cap_add: [CHOWN, SETGID, SETUID, DAC_OVERRIDE]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    <<: *restart
+    networks: [ai-net]
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: postgres
+    <<: *restart
+    networks: [ai-net]
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  tika:
+    image: apache/tika:latest-full
+    container_name: tika
+    <<: *restart
+    networks: [ai-net]
+    volumes:
+      - tika-data:/tmp
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    <<: *restart
+    networks: [ai-net]
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis-data:/data

@@ -1,0 +1,25 @@
+---
+# =============================================================
+# Master playbook - executa todos os estágios na ordem correta
+# Uso:
+#   ansible-playbook site.yml --ask-vault-pass
+#   ansible-playbook site.yml --tags inference --ask-vault-pass
+# =============================================================
+
+- import_playbook: playbooks/00-pve-host.yml
+  tags: [pve, iommu]
+
+- import_playbook: playbooks/01-provision-guests.yml
+  tags: [provision]
+
+- import_playbook: playbooks/02-ai-inference.yml
+  tags: [inference, ollama]
+
+- import_playbook: playbooks/03-ai-apps.yml
+  tags: [apps]
+
+- import_playbook: playbooks/04-edge.yml
+  tags: [edge]
+
+- import_playbook: playbooks/05-observability.yml
+  tags: [observ]

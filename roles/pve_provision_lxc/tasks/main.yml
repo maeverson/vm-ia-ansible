@@ -1,0 +1,56 @@
+---
+- name: "PVE | Atualizar lista de templates LXC"
+  ansible.builtin.shell: pveam update
+  changed_when: false
+
+- name: "PVE | Baixar template Ubuntu 24.04 LXC"
+  ansible.builtin.shell: "pveam download local {{ lxc_template }}"
+  args:
+    creates: "/var/lib/vz/template/cache/{{ lxc_template }}"
+
+- name: "PVE | Ler SSH public key"
+  ansible.builtin.slurp:
+    src: "{{ ssh_public_key_file }}"
+  register: ssh_pubkey_b64
+  delegate_to: localhost
+  become: false
+
+- name: "PVE | Criar LXCs (idempotente)"
+  community.general.proxmox:
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    api_host: "{{ proxmox_api_host }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ item.vmid }}"
+    hostname: "{{ item.hostname }}"
+    ostemplate: "local:vztmpl/{{ lxc_template }}"
+    cores: "{{ item.cores }}"
+    memory: "{{ item.memory }}"
+    disk: "{{ proxmox_storage }}:{{ item.disk }}"
+    netif:
+      net0: "name=eth0,bridge={{ pve_bridge }},ip={{ item.ip }}/24,gw={{ gateway }}"
+    nameserver: "{{ dns_servers | join(' ') }}"
+    unprivileged: true
+    features:
+      - nesting=1
+      - keyctl=1
+    onboot: true
+    pubkey: "{{ ssh_pubkey_b64.content | b64decode }}"
+    password: "{{ default_cloud_user_password }}"
+    state: present
+  loop: "{{ lxc_list }}"
+  loop_control:
+    label: "{{ item.hostname }} (CTID {{ item.vmid }})"
+
+- name: "PVE | Iniciar LXCs"
+  community.general.proxmox:
+    api_user: "{{ proxmox_api_user }}"
+    api_password: "{{ proxmox_api_password }}"
+    api_host: "{{ proxmox_api_host }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ item.vmid }}"
+    hostname: "{{ item.hostname }}"
+    state: started
+  loop: "{{ lxc_list }}"
+  loop_control:
+    label: "{{ item.hostname }}"

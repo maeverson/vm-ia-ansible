@@ -1,0 +1,34 @@
+# Gerenciado pelo Ansible
+http:
+  routers:
+    openwebui:
+      rule: "Host(`{{ domain }}`)"
+      service: openwebui
+      entryPoints: [websecure]
+      tls: true
+      middlewares: [secure-headers]
+    ollama:
+      rule: "Host(`ollama.{{ domain.split('.', 1)[1] }}`)"
+      service: ollama
+      entryPoints: [websecure]
+      tls: true
+      middlewares: [secure-headers]
+
+  services:
+    openwebui:
+      loadBalancer:
+        servers:
+          - url: "{{ open_webui_endpoint }}"
+    ollama:
+      loadBalancer:
+        servers:
+          - url: "{{ ollama_endpoint }}"
+
+  middlewares:
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        frameDeny: true

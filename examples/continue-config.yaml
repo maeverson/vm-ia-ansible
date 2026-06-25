@@ -1,0 +1,54 @@
+# Distribua aos devs em ~/.continue/config.yaml
+name: Local AI Stack
+version: 1.0.0
+
+models:
+  - name: Qwen3 Coder 14B
+    provider: ollama
+    model: qwen3-coder-rag:latest
+    apiBase: https://ollama.empresa.local
+    roles: [chat, edit, apply]
+    defaultCompletionOptions:
+      contextLength: 32768
+      temperature: 0.2
+      maxTokens: 4096
+
+  - name: Qwen Coder 7B FIM
+    provider: ollama
+    model: qwen2.5-coder:7b-base
+    apiBase: https://ollama.empresa.local
+    roles: [autocomplete]
+    defaultCompletionOptions:
+      maxTokens: 256
+      temperature: 0.1
+
+  - name: BGE-M3
+    provider: ollama
+    model: bge-m3:latest
+    apiBase: https://ollama.empresa.local
+    roles: [embed]
+
+context:
+  - provider: code
+  - provider: docs
+  - provider: diff
+  - provider: terminal
+  - provider: problems
+  - provider: codebase
+  - provider: folder
+  - provider: open
+  - provider: tree
+
+rules:
+  - "Sempre responder em portugues brasileiro."
+  - "Priorize codigo Java/Spring Boot idiomatico e seguro (OWASP Top 10)."
+  - "Para infra: prefira Docker Compose, Kubernetes manifests com securityContext explicito."
+  - "Inclua testes JUnit 5 quando gerar codigo de producao."
+
+slashCommands:
+  - name: review
+    description: Revisao de codigo (security + clean code)
+    prompt: |
+      Faca uma revisao critica do codigo selecionado considerando OWASP Top 10,
+      performance, Clean Code, SOLID e cobertura de testes.
+      Apresente findings em tabela com severidade.

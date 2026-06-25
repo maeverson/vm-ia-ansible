@@ -1,0 +1,23 @@
+# Gerenciado pelo Ansible
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'ollama'
+    static_configs:
+      - targets: ['10.10.10.10:11434']
+
+  - job_name: 'nvidia-dcgm'
+    static_configs:
+      - targets: ['10.10.10.10:9400']
+
+  - job_name: 'cadvisor-apps'
+    static_configs:
+      - targets: ['10.10.10.11:8080']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets:
+          - '10.10.10.10:9100'
+          - '10.10.10.11:9100'

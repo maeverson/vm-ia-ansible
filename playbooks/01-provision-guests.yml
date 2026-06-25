@@ -1,0 +1,22 @@
+---
+# Cria as VMs (ai-inference, ai-apps) e LXCs (edge, observability)
+- name: "PVE | Provisionar VMs e LXCs"
+  hosts: pve
+  gather_facts: true
+  become: false
+  roles:
+    - role: pve_provision_vm
+    - role: pve_provision_lxc
+
+  post_tasks:
+    - name: "Aguardar VMs subirem por SSH"
+      ansible.builtin.wait_for:
+        host: "{{ item }}"
+        port: 22
+        delay: 10
+        timeout: 600
+      loop:
+        - 10.10.10.10
+        - 10.10.10.11
+        - 10.10.10.20
+        - 10.10.10.21

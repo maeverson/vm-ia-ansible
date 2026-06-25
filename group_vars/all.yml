@@ -1,0 +1,46 @@
+---
+# =============================================================
+# Configuração global (não-sensível)
+# Secrets estão em group_vars/vault.yml (ansible-vault)
+# =============================================================
+
+# Rede
+domain: ai.empresa.local
+network_cidr: 10.10.10.0/24
+gateway: 10.10.10.1
+dns_servers:
+  - "1.1.1.1"
+  - "8.8.8.8"
+pve_bridge: vmbr1
+
+# Proxmox API
+proxmox_api_host: 10.10.10.1
+proxmox_node: pve
+proxmox_api_user: "{{ vault_proxmox_api_user }}"
+proxmox_api_password: "{{ vault_proxmox_api_password }}"
+proxmox_storage: local-lvm
+
+# GPU passthrough (RTX 3060)
+gpu_vendor_id: "10de"
+gpu_device_id: "2504"
+gpu_audio_id: "10de:228e"
+
+# Ubuntu cloud image
+ubuntu_image_url: https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
+ubuntu_image_path: /var/lib/vz/template/iso/noble-server-cloudimg-amd64.img
+lxc_template: ubuntu-24.04-standard_24.04-2_amd64.tar.zst
+
+# SSH key para cloud-init
+ssh_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa.pub"
+
+# Endpoints internos
+ollama_endpoint: "http://10.10.10.10:11434"
+open_webui_endpoint: "http://10.10.10.11:3000"
+
+# Credenciais (vault)
+postgres_password: "{{ vault_postgres_password }}"
+webui_secret: "{{ vault_webui_secret }}"
+authentik_secret: "{{ vault_authentik_secret }}"
+authentik_pg_pass: "{{ vault_authentik_pg_pass }}"
+grafana_admin_pass: "{{ vault_grafana_admin_pass }}"
+default_cloud_user_password: "{{ vault_default_cloud_user_password }}"

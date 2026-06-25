@@ -1,0 +1,9 @@
+---
+# Traefik (HTTPS) + Authentik (SSO/OIDC)
+- name: "Edge | Traefik + Authentik"
+  hosts: edge
+  gather_facts: true
+  become: true
+  roles:
+    - role: docker
+    - role: edge_stack

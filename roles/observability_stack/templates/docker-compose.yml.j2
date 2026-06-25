@@ -1,0 +1,48 @@
+# Gerenciado pelo Ansible
+version: "3.9"
+
+networks:
+  observ: {}
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    networks: [observ]
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    networks: [observ]
+    ports: ["3001:3000"]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_pass }}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    networks: [observ]
+    ports: ["3100:3100"]
+    volumes:
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:latest
+    restart: unless-stopped
+    networks: [observ]
+    volumes:
+      - ./promtail:/etc/promtail
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/config.yml

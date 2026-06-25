@@ -1,0 +1,41 @@
+---
+- name: "Observ | Criar diretorios"
+  ansible.builtin.file:
+    path: "/opt/observ/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - ""
+    - prometheus
+    - grafana
+    - grafana/provisioning
+    - loki
+    - promtail
+
+- name: "Observ | prometheus.yml"
+  ansible.builtin.template:
+    src: prometheus.yml.j2
+    dest: /opt/observ/prometheus/prometheus.yml
+    mode: '0644'
+  notify: restart observ
+
+- name: "Observ | docker-compose.yml"
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/observ/docker-compose.yml
+    mode: '0644'
+  notify: restart observ
+
+- name: "Observ | promtail config"
+  ansible.builtin.template:
+    src: promtail-config.yml.j2
+    dest: /opt/observ/promtail/config.yml
+    mode: '0644'
+  notify: restart observ
+
+- name: "Observ | Subir stack"
+  community.docker.docker_compose_v2:
+    project_src: /opt/observ
+    state: present
+    pull: missing
+    remove_orphans: true

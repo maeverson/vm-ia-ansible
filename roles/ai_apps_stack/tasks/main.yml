@@ -1,0 +1,55 @@
+---
+- name: "AI Apps | Criar diretorios"
+  ansible.builtin.file:
+    path: "/opt/ai-stack/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - ""
+    - searxng
+    - traefik
+    - backups
+    - functions
+
+- name: "AI Apps | .env (vault-backed)"
+  ansible.builtin.template:
+    src: env.j2
+    dest: /opt/ai-stack/.env
+    mode: '0600'
+  notify: restart ai apps
+
+- name: "AI Apps | docker-compose.yml"
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/ai-stack/docker-compose.yml
+    mode: '0644'
+  notify: restart ai apps
+
+- name: "AI Apps | SearXNG settings.yml"
+  ansible.builtin.template:
+    src: searxng-settings.yml.j2
+    dest: /opt/ai-stack/searxng/settings.yml
+    mode: '0644'
+  notify: restart ai apps
+
+- name: "AI Apps | PII redactor (Filter Function)"
+  ansible.builtin.copy:
+    src: pii-redactor.py
+    dest: /opt/ai-stack/functions/pii-redactor.py
+    mode: '0644'
+
+- name: "AI Apps | Subir stack com Docker Compose"
+  community.docker.docker_compose_v2:
+    project_src: /opt/ai-stack
+    state: present
+    pull: missing
+    remove_orphans: true
+
+- name: "AI Apps | Validar Open WebUI"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:3000/health"
+    status_code: [200, 401, 404]
+  register: owui_health
+  retries: 12
+  delay: 10
+  until: owui_health.status in [200, 401, 404]

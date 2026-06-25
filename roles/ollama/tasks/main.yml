@@ -1,0 +1,108 @@
+---
+- name: "Ollama | Verificar instalacao"
+  ansible.builtin.stat:
+    path: /usr/local/bin/ollama
+  register: ollama_bin
+
+- name: "Ollama | Baixar script de instalacao"
+  ansible.builtin.get_url:
+    url: https://ollama.com/install.sh
+    dest: /tmp/ollama-install.sh
+    mode: '0755'
+  when: not ollama_bin.stat.exists
+
+- name: "Ollama | Instalar"
+  ansible.builtin.shell: /tmp/ollama-install.sh
+  when: not ollama_bin.stat.exists
+
+- name: "Ollama | Criar diretorio override systemd"
+  ansible.builtin.file:
+    path: /etc/systemd/system/ollama.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "Ollama | Configurar override.conf"
+  ansible.builtin.template:
+    src: override.conf.j2
+    dest: /etc/systemd/system/ollama.service.d/override.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart ollama
+
+- name: "Ollama | Diretorio de modelos"
+  ansible.builtin.file:
+    path: /var/lib/ollama/models
+    state: directory
+    owner: ollama
+    group: ollama
+    mode: '0755'
+
+- name: "Ollama | Habilitar e iniciar servico"
+  ansible.builtin.systemd:
+    name: ollama
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: "Ollama | Aguardar API"
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: 11434
+    delay: 3
+    timeout: 60
+
+- name: "Ollama | Listar modelos instalados"
+  ansible.builtin.shell: ollama list
+  register: ollama_list
+  changed_when: false
+
+- name: "Ollama | Pull dos modelos base"
+  ansible.builtin.shell: "ollama pull {{ item }}"
+  loop: "{{ ollama_models }}"
+  loop_control:
+    label: "{{ item }}"
+  when: item not in ollama_list.stdout
+  async: 7200
+  poll: 30
+
+- name: "Ollama | Diretorio de Modelfiles"
+  ansible.builtin.file:
+    path: /root/modelfiles
+    state: directory
+    mode: '0755'
+
+- name: "Ollama | Gerar Modelfiles customizados"
+  ansible.builtin.template:
+    src: "{{ item.template }}"
+    dest: "/root/modelfiles/Modelfile.{{ item.name }}"
+    mode: '0644'
+  loop: "{{ ollama_custom_models }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: modelfile_render
+
+- name: "Ollama | Listar modelos novamente"
+  ansible.builtin.shell: ollama list
+  register: ollama_list2
+  changed_when: false
+
+- name: "Ollama | Criar modelos customizados"
+  ansible.builtin.shell: "ollama create {{ item.name }} -f /root/modelfiles/Modelfile.{{ item.name }}"
+  loop: "{{ ollama_custom_models }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.name not in ollama_list2.stdout or (modelfile_render is changed)
+
+- name: "Ollama | Validar com prompt rapido"
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:11434/api/tags"
+    return_content: true
+  register: api_tags
+  changed_when: false
+
+- name: "Ollama | Modelos disponiveis"
+  ansible.builtin.debug:
+    msg: "{{ api_tags.json.models | map(attribute='name') | list }}"

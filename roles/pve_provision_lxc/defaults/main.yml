@@ -1,14 +1,13 @@
----
 lxc_list:
   - vmid: 9100
     hostname: lxc-edge
-    ip: 10.10.10.20
+    ip: 192.168.15.52 # IP fixo na LAN flat 192.168.15.0/24 (vmbr0)
     cores: 2
     memory: 4096
     disk: 20
   - vmid: 9101
     hostname: lxc-observability
-    ip: 10.10.10.21
+    ip: 192.168.15.53 # IP fixo na LAN flat 192.168.15.0/24 (vmbr0)
     cores: 2
     memory: 8192
     disk: 100

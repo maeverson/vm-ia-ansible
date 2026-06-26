@@ -1,4 +1,4 @@
-# Gerenciado pelo Ansible
+# Gerenciado pelo Ansible (targets na LAN flat 192.168.15.0/24)
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
@@ -6,18 +6,18 @@ global:
 scrape_configs:
   - job_name: 'ollama'
     static_configs:
-      - targets: ['10.10.10.10:11434']
+      - targets: ['192.168.15.50:11434']
 
   - job_name: 'nvidia-dcgm'
     static_configs:
-      - targets: ['10.10.10.10:9400']
+      - targets: ['192.168.15.50:9400']
 
   - job_name: 'cadvisor-apps'
     static_configs:
-      - targets: ['10.10.10.11:8080']
+      - targets: ['192.168.15.51:8080']
 
   - job_name: 'node-exporter'
     static_configs:
       - targets:
-          - '10.10.10.10:9100'
-          - '10.10.10.11:9100'
+          - '192.168.15.50:9100'
+          - '192.168.15.51:9100'

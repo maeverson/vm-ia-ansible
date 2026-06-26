@@ -1,11 +1,10 @@
----
 vm_list:
   - name: vm-ai-inference
     vmid: 9001
     cores: 12
     memory: 49152
     disk_size: 200
-    ip: 10.10.10.10
+    ip: 192.168.15.50 # IP fixo na LAN flat 192.168.15.0/24 (vmbr0)
     gpu_passthrough: true
     pci_id: "01:00"
   - name: vm-ai-apps
@@ -13,6 +12,6 @@ vm_list:
     cores: 8
     memory: 49152
     disk_size: 300
-    ip: 10.10.10.11
+    ip: 192.168.15.51 # IP fixo na LAN flat 192.168.15.0/24 (vmbr0)
     gpu_passthrough: false
     pci_id: ""

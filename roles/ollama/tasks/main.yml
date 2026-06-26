@@ -8,7 +8,7 @@
   ansible.builtin.get_url:
     url: https://ollama.com/install.sh
     dest: /tmp/ollama-install.sh
-    mode: '0755'
+    mode: "0755"
   when: not ollama_bin.stat.exists
 
 - name: "Ollama | Instalar"
@@ -21,7 +21,7 @@
     state: directory
     owner: root
     group: root
-    mode: '0755'
+    mode: "0755"
 
 - name: "Ollama | Configurar override.conf"
   ansible.builtin.template:
@@ -29,7 +29,7 @@
     dest: /etc/systemd/system/ollama.service.d/override.conf
     owner: root
     group: root
-    mode: '0644'
+    mode: "0644"
   notify: restart ollama
 
 - name: "Ollama | Diretorio de modelos"
@@ -38,7 +38,7 @@
     state: directory
     owner: ollama
     group: ollama
-    mode: '0755'
+    mode: "0755"
 
 - name: "Ollama | Habilitar e iniciar servico"
   ansible.builtin.systemd:
@@ -53,6 +53,44 @@
     port: 11434
     delay: 3
     timeout: 60
+
+- name: "Ollama | Instalar UFW"
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true
+
+- name: "Ollama | Permitir SSH"
+  community.general.ufw:
+    rule: allow
+    name: OpenSSH
+
+- name: "Ollama | Permitir Ollama apenas da subnet interna"
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    from_ip: "{{ network_cidr }}"
+    to_port: "11434"
+
+- name: "Ollama | Permitir metricas internas da subnet"
+  community.general.ufw:
+    rule: allow
+    proto: tcp
+    from_ip: "{{ network_cidr }}"
+    to_port: "{{ item }}"
+  loop:
+    - "9100"
+    - "9400"
+
+- name: "Ollama | Bloquear Ollama fora da subnet interna"
+  community.general.ufw:
+    rule: deny
+    proto: tcp
+    to_port: "11434"
+
+- name: "Ollama | Habilitar firewall"
+  community.general.ufw:
+    state: enabled
 
 - name: "Ollama | Listar modelos instalados"
   ansible.builtin.shell: ollama list
@@ -72,13 +110,13 @@
   ansible.builtin.file:
     path: /root/modelfiles
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: "Ollama | Gerar Modelfiles customizados"
   ansible.builtin.template:
     src: "{{ item.template }}"
     dest: "/root/modelfiles/Modelfile.{{ item.name }}"
-    mode: '0644'
+    mode: "0644"
   loop: "{{ ollama_custom_models }}"
   loop_control:
     label: "{{ item.name }}"

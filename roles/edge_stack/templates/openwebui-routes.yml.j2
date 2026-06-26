@@ -18,11 +18,11 @@ http:
     openwebui:
       loadBalancer:
         servers:
-          - url: "{{ open_webui_endpoint }}"
+          - url: "http://192.168.15.51:3000"
     ollama:
       loadBalancer:
         servers:
-          - url: "{{ ollama_endpoint }}"
+          - url: "https://192.168.15.50:11434"
 
   middlewares:
     secure-headers:

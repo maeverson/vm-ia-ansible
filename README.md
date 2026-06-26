@@ -28,7 +28,7 @@ ansible-galaxy collection install -r requirements.yml
 
 ### 2) Configurar inventário
 
-Edite `inventory/hosts.yml` com os IPs do seu ambiente (default: rede `10.10.10.0/24`).
+Edite `inventory/hosts.yml` com os IPs do seu ambiente (default: rede flat `192.168.15.0/24`, bridge `vmbr0`, gateway `192.168.15.254`).
 
 ### 3) Configurar secrets (Ansible Vault)
 
@@ -52,20 +52,36 @@ ansible-playbook site.yml --ask-vault-pass
 
 - Open WebUI: https://ai.empresa.local
 - Authentik (SSO admin): https://auth.empresa.local
-- Grafana: http://10.10.10.21:3001
+- Grafana: http://192.168.15.53:3001
+
+### DNS interno (ai.empresa.local)
+
+Como a stack usa a LAN flat `192.168.15.0/24` sem NAT, configure a resolução interna para `ai.empresa.local` e `auth.empresa.local` apontando para o `lxc-edge` (`192.168.15.52`).
+
+1. Opção `/etc/hosts` (rápida para testes)
+2. Opção AdGuard Home/Pi-hole (recomendado para laboratório/equipe)
+3. Opção DNS do roteador (entrada estática no DNS local)
+
+Exemplo em `/etc/hosts`:
+
+```text
+192.168.15.52 ai.empresa.local
+192.168.15.52 auth.empresa.local
+192.168.15.52 ollama.empresa.local
+```
 
 ---
 
 ## 🎯 Execução por etapas (tags)
 
-| Tag | O que executa | Quando usar |
-|-----|--------------|-------------|
+| Tag             | O que executa                      | Quando usar            |
+| --------------- | ---------------------------------- | ---------------------- |
 | `pve` / `iommu` | Configura IOMMU + VFIO no host PVE | 1ª vez (requer reboot) |
-| `provision` | Cria VMs e LXCs no PVE | Após reboot do host |
-| `inference` | NVIDIA + Ollama + modelos | Stack de IA |
-| `apps` | Open WebUI + RAG | Frontend |
-| `edge` | Traefik + Authentik | SSO/HTTPS |
-| `observ` | Prometheus + Grafana + Loki | Monitoring |
+| `provision`     | Cria VMs e LXCs no PVE             | Após reboot do host    |
+| `inference`     | NVIDIA + Ollama + modelos          | Stack de IA            |
+| `apps`          | Open WebUI + RAG                   | Frontend               |
+| `edge`          | Traefik + Authentik                | SSO/HTTPS              |
+| `observ`        | Prometheus + Grafana + Loki        | Monitoring             |
 
 ```bash
 # Exemplos
@@ -130,14 +146,14 @@ ansible-ai-stack/
 
 ## 🛠️ Troubleshooting
 
-| Sintoma | Causa provável | Correção |
-|---------|----------------|----------|
-| `proxmox_kvm` falha autenticando | Vault errado | `ansible-vault view group_vars/vault.yml` |
-| Reboot loop após `pve_iommu` | IOMMU não suportado pela BIOS | Habilitar VT-d / AMD-Vi |
-| `nvidia-smi` falha | Driver não carregou após reboot | `--tags inference` re-executa idempotentemente |
-| Ollama lento | Modelos rodando na CPU | Verificar `nvidia-smi` na VM e re-run `--tags inference` |
-| Compose não sobe | Variáveis vazias | Verificar `group_vars/vault.yml` |
-| SSH timeout pós-reboot | Reboot do PVE em curso | Aguardar 2 min e re-executar |
+| Sintoma                          | Causa provável                  | Correção                                                 |
+| -------------------------------- | ------------------------------- | -------------------------------------------------------- |
+| `proxmox_kvm` falha autenticando | Vault errado                    | `ansible-vault view group_vars/vault.yml`                |
+| Reboot loop após `pve_iommu`     | IOMMU não suportado pela BIOS   | Habilitar VT-d / AMD-Vi                                  |
+| `nvidia-smi` falha               | Driver não carregou após reboot | `--tags inference` re-executa idempotentemente           |
+| Ollama lento                     | Modelos rodando na CPU          | Verificar `nvidia-smi` na VM e re-run `--tags inference` |
+| Compose não sobe                 | Variáveis vazias                | Verificar `group_vars/vault.yml`                         |
+| SSH timeout pós-reboot           | Reboot do PVE em curso          | Aguardar 2 min e re-executar                             |
 
 ```bash
 # Debug verboso

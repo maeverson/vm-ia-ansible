@@ -6,19 +6,23 @@
 
 # Rede
 domain: ai.empresa.local
-network_cidr: 10.10.10.0/24
-gateway: 10.10.10.1
+network_cidr: 192.168.15.0/24
+gateway: 192.168.15.254
 dns_servers:
+  - "192.168.15.254"
   - "1.1.1.1"
-  - "8.8.8.8"
-pve_bridge: vmbr1
+pve_bridge: vmbr0
 
 # Proxmox API
-proxmox_api_host: 10.10.10.1
+proxmox_api_host: 192.168.15.10
 proxmox_node: pve
 proxmox_api_user: "{{ vault_proxmox_api_user }}"
 proxmox_api_password: "{{ vault_proxmox_api_password }}"
-proxmox_storage: local-lvm
+proxmox_storage: nvme0n1-thin
+
+# Endpoints internos
+ollama_endpoint: "http://192.168.15.50:11434"
+open_webui_endpoint: "http://192.168.15.51:3000"
 
 # GPU passthrough (RTX 3060)
 gpu_vendor_id: "10de"
@@ -32,10 +36,6 @@ lxc_template: ubuntu-24.04-standard_24.04-2_amd64.tar.zst
 
 # SSH key para cloud-init
 ssh_public_key_file: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa.pub"
-
-# Endpoints internos
-ollama_endpoint: "http://10.10.10.10:11434"
-open_webui_endpoint: "http://10.10.10.11:3000"
 
 # Credenciais (vault)
 postgres_password: "{{ vault_postgres_password }}"
